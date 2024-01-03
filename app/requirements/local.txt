@@ -1,0 +1,7 @@
+-r base.txt
+
+black==23.12.1
+mypy==1.8.0
+pylint==3.0.3
+isort==5.13.2
+flake8==6.1.0

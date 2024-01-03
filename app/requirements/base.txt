@@ -1,0 +1,11 @@
+alembic==1.13.1
+asyncpg==0.29.0
+fastapi==0.108.0
+fastapi_pagination==0.12.14
+fastapi-sqlalchemy-toolkit==0.6.7
+pydantic==2.5.3
+pydantic-settings==2.1.0
+uvicorn==0.25.0
+email-validator==2.1.0.post1
+sqlalchemy==2.0.25
+sqlakeyset==2.0.1701229837

@@ -1,0 +1,56 @@
+version: "3.8"
+
+services:
+  fastapi:
+    container_name: service_a
+    expose:
+      - 8000
+    build: ./app
+    depends_on:
+      - postgres
+    env_file:
+      - app/app/.env
+    restart: always
+    command: bash -c "
+      alembic upgrade head &&
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers"
+
+  postgres:
+    image: postgres:15.2
+    expose:
+      - 5432
+    volumes:
+      - ./data/postgresql:/var/lib/postgresql/data
+      - ./backups:/backups
+    env_file:
+      - app/app/.env
+    restart: always
+
+  pgadmin:
+    image: dpage/pgadmin4
+    depends_on:
+      - postgres
+    ports:
+      - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@test.com
+      - PGADMIN_DEFAULT_PASSWORD=ASDGmp;oq234980jfdowsij
+    restart: always
+
+  nginx:
+    restart: always
+    build: ./nginx
+    ports:
+      - 8000:80
+    depends_on:
+      - fastapi
+
+  pgbackups:
+    image: prodrigestivill/postgres-backup-local
+    restart: always
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      - postgres
+    env_file:
+      - app/app/.env

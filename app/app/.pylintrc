@@ -1,0 +1,5 @@
+[FORMAT]
+max-line-length=88
+
+[MESSAGES CONTROL]
+disable=missing-docstring,no-else-return,too-few-public-methods,no-self-argument,no-name-in-module,wrong-import-order

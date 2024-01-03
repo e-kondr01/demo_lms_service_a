@@ -1,0 +1,7 @@
+[tool.isort]
+profile = "black"
+extend_skip = ["versions"]
+src_paths = ["app"]
+
+[tool.black]
+extend-exclude = "versions/"
