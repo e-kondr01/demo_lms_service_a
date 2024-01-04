@@ -26,6 +26,7 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
                 contains_eager(Assessment.unit),
                 contains_eager(Assessment.student).joinedload(Student.institution),
             )
+            .order_by(Assessment.created_at)
         )
 
         if unit_id:
