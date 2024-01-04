@@ -1,6 +1,7 @@
 from typing import Annotated, AsyncGenerator
 
 from fastapi import Depends
+from fastapi_pagination import Params
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import async_session_factory

@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.endpoints.student_progress import router as student_progress_router
+from app.api.endpoints.assessment import router as assessment_router
 
 api_router = APIRouter()
-api_router.include_router(student_progress_router, prefix="/student-progresses")
+api_router.include_router(assessment_router, prefix="/assessments")

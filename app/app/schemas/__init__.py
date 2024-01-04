@@ -8,11 +8,18 @@ class UnitSchema(BaseModel):
     name: str
 
 
-class StudentSchema(BaseModel):
+class InstitutionSchema(BaseModel):
     id: UUID
     name: str
 
 
-class StudentProgressSchema(BaseModel):
-    current_unit: UnitSchema
+class StudentSchema(BaseModel):
+    id: UUID
+    name: str
+    institution: InstitutionSchema
+
+
+class AssessmentSchema(BaseModel):
+    unit: UnitSchema
     student: StudentSchema
+    grade: int | None
