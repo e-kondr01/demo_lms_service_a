@@ -1,6 +1,11 @@
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel as PydanticBaseModel
+from pydantic import ConfigDict
+
+
+class BaseModel(PydanticBaseModel):
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UnitSchema(BaseModel):

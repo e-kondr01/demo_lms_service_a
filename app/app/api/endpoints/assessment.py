@@ -6,7 +6,6 @@ from fastapi_pagination import Page
 from app.api.deps import Session
 from app.managers.assessment import assessment_manager
 from app.schemas import AssessmentSchema
-from app.services.service_b import service_b
 
 router = APIRouter()
 
@@ -22,21 +21,20 @@ async def get_assessments_cqrs(
     )  # type: ignore
 
 
-# TODO: наивный API composition с получением в цикле
 @router.get("/cyclic-api-composition")
 async def get_assessments_cyclic(
     session: Session,
+    page_size: int = 20,
+    page_number: int = 1,
     unit_id: UUID | None = None,
     institution_id: UUID | None = None,
-) -> Page[AssessmentSchema]:
-    students = await service_b.get_students(
-        {
-            "fe9e186e-26d1-4046-a557-70b3e805c256",
-            "ec7c8d13-aae5-43e0-99b2-a47cbb02c4cc",
-        }
-    )
-    return await assessment_manager.get_list_cqrs(
-        session, unit_id=unit_id, institution_id=institution_id
+) -> list[AssessmentSchema]:
+    return await assessment_manager.get_list_cyclic_api_composition(
+        session,
+        page_size=page_size,
+        page_number=page_number,
+        unit_id=unit_id,
+        institution_id=institution_id,
     )  # type: ignore
 
 
