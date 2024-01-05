@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter
@@ -25,17 +26,31 @@ async def get_assessments_cqrs(
 async def get_assessments_cyclic(
     session: Session,
     page_size: int = 20,
-    page_number: int = 1,
+    previous_created_at: datetime | None = None,
     unit_id: UUID | None = None,
     institution_id: UUID | None = None,
 ) -> list[AssessmentSchema]:
     return await assessment_manager.get_list_cyclic_api_composition(
         session,
         page_size=page_size,
+        previous_created_at=previous_created_at,
+        unit_id=unit_id,
+        institution_id=institution_id,
+    )
+
+
+@router.get("/paginated-api-composition")
+async def get_paginated_assessments_api_composition(
+    session: Session,
+    page_size: int = 20,
+    page_number: int = 1,
+    unit_id: UUID | None = None,
+    institution_id: UUID | None = None,
+) -> list[AssessmentSchema]:
+    return await assessment_manager.get_paginated_list_api_composition(
+        session,
+        page_size=page_size,
         page_number=page_number,
         unit_id=unit_id,
         institution_id=institution_id,
-    )  # type: ignore
-
-
-# TODO: API composition через select id where
+    )

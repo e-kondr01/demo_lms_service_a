@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from fastapi_pagination import Page
@@ -42,50 +43,102 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
         self,
         session: AsyncSession,
         page_size: int = 20,
-        page_number: int = 1,
+        previous_created_at: datetime | None = None,
         unit_id: UUID | None = None,
         institution_id: UUID | None = None,
     ) -> list[AssessmentSchema]:
-        # TODO: неправильно отдаёт результаты последующих страниц,
-        # если на предыдущих были пропуски от второго сервиса
         filtered_result: list[AssessmentSchema] = []
-        offset = page_size * (page_number - 1)
 
-        while True:
-            stmt = (
-                select(Assessment)
-                .join(Assessment.unit)
-                .options(
-                    contains_eager(Assessment.unit),
-                )
-                .order_by(Assessment.created_at)
-                .limit(page_size)
-                .offset(offset)
+        base_stmt = (
+            select(Assessment)
+            .join(Assessment.unit)
+            .options(
+                contains_eager(Assessment.unit),
             )
-            if unit_id:
-                stmt = stmt.filter(Unit.id == unit_id)
+            .order_by(Assessment.created_at)
+            .limit(page_size)
+        )
+        if unit_id:
+            base_stmt = base_stmt.filter(Unit.id == unit_id)
+        if previous_created_at:
+            base_stmt = base_stmt.filter(Assessment.created_at > previous_created_at)
+
+        offset = 0
+        while True:
+            stmt = base_stmt.offset(offset)
             assessments = (await session.execute(stmt)).scalars().all()
             if not assessments:
                 return filtered_result
             student_ids = {str(assessment.student_id) for assessment in assessments}
             students = await service_b.get_students(
-                student_ids, institution_id=institution_id
+                student_ids,
+                institution_id=institution_id,
+                limit=page_size - len(filtered_result),
             )
-            assessments_by_student_id = {
-                assessment.student_id: assessment for assessment in assessments
-            }
-            for student in students:
-                if student.id in assessments_by_student_id:
+            students_by_id = {student.id: student for student in students}
+            for assessment in assessments:
+                if assessment.student_id in students_by_id:
                     filtered_result.append(
                         AssessmentSchema(
-                            unit=assessments_by_student_id[student.id].unit,
-                            grade=assessments_by_student_id[student.id].grade,
-                            student=student,
+                            unit=assessment.unit,
+                            grade=assessment.grade,
+                            student=students_by_id[assessment.student_id],
+                            created_at=assessment.created_at,
                         )
                     )
                     if len(filtered_result) == page_size:
                         return filtered_result
             offset += page_size
+
+    async def get_paginated_list_api_composition(
+        self,
+        session: AsyncSession,
+        page_size: int = 20,
+        page_number: int = 1,
+        unit_id: UUID | None = None,
+        institution_id: UUID | None = None,
+    ) -> list[AssessmentSchema]:
+        student_id_stmt = select(Assessment.student_id)
+        if unit_id:
+            student_id_stmt = student_id_stmt.where(Assessment.unit_id == unit_id)
+        student_ids = (await session.execute(student_id_stmt)).scalars().all()
+        filtered_student_ids = await service_b.get_student_ids(
+            {str(student_id) for student_id in student_ids},
+            institution_id=institution_id,
+        )
+
+        stmt = (
+            select(Assessment)
+            .join(Assessment.unit)
+            .options(
+                contains_eager(Assessment.unit),
+            )
+            .order_by(Assessment.created_at)
+            .limit(page_size)
+            .offset(page_size * (page_number - 1))
+            .where(Assessment.student_id.in_(filtered_student_ids))
+        )
+        if unit_id:
+            student_id_stmt = student_id_stmt.where(Assessment.unit_id == unit_id)
+        assessments = (await session.execute(stmt)).scalars().all()
+        if not assessments:
+            return []
+        result_student_ids = {str(assessment.student_id) for assessment in assessments}
+        students = await service_b.get_students(
+            result_student_ids,
+        )
+        students_by_id = {student.id: student for student in students}
+        result = []
+        for assessment in assessments:
+            result.append(
+                AssessmentSchema(
+                    unit=assessment.unit,
+                    grade=assessment.grade,
+                    student=students_by_id[assessment.student_id],
+                    created_at=assessment.created_at,
+                )
+            )
+        return result
 
 
 assessment_manager = AssessmentManager(Assessment)

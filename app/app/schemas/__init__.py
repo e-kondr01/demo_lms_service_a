@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel as PydanticBaseModel
@@ -28,3 +29,4 @@ class AssessmentSchema(BaseModel):
     unit: UnitSchema
     student: StudentSchema
     grade: int | None
+    created_at: datetime
