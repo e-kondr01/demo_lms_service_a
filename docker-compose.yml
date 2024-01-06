@@ -10,10 +10,9 @@ services:
       - postgres
     env_file:
       - app/app/.env
-    restart: always
     command: bash -c "
       alembic upgrade head &&
-      uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers"
+      gunicorn -k uvicorn.workers.UvicornWorker app.main:app -b 0.0.0.0:8000"
 
   postgres:
     image: postgres:15.2
@@ -24,33 +23,10 @@ services:
       - ./backups:/backups
     env_file:
       - app/app/.env
-    restart: always
-
-  pgadmin:
-    image: dpage/pgadmin4
-    depends_on:
-      - postgres
-    ports:
-      - "5050:80"
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@test.com
-      - PGADMIN_DEFAULT_PASSWORD=ASDGmp;oq234980jfdowsij
-    restart: always
 
   nginx:
-    restart: always
     build: ./nginx
     ports:
       - 8000:80
     depends_on:
       - fastapi
-
-  pgbackups:
-    image: prodrigestivill/postgres-backup-local
-    restart: always
-    volumes:
-      - ./backups:/backups
-    depends_on:
-      - postgres
-    env_file:
-      - app/app/.env

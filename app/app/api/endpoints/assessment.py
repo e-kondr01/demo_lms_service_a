@@ -25,14 +25,14 @@ async def get_assessments_cqrs(
 @router.get("/cyclic-api-composition")
 async def get_assessments_cyclic(
     session: Session,
-    page_size: int = 20,
+    size: int = 20,
     previous_created_at: datetime | None = None,
     unit_id: UUID | None = None,
     institution_id: UUID | None = None,
 ) -> list[AssessmentSchema]:
     return await assessment_manager.get_list_cyclic_api_composition(
         session,
-        page_size=page_size,
+        page_size=size,
         previous_created_at=previous_created_at,
         unit_id=unit_id,
         institution_id=institution_id,
@@ -42,15 +42,15 @@ async def get_assessments_cyclic(
 @router.get("/paginated-api-composition")
 async def get_paginated_assessments_api_composition(
     session: Session,
-    page_size: int = 20,
-    page_number: int = 1,
+    size: int = 20,
+    page: int = 1,
     unit_id: UUID | None = None,
     institution_id: UUID | None = None,
 ) -> list[AssessmentSchema]:
     return await assessment_manager.get_paginated_list_api_composition(
         session,
-        page_size=page_size,
-        page_number=page_number,
+        page_size=size,
+        page_number=page,
         unit_id=unit_id,
         institution_id=institution_id,
     )

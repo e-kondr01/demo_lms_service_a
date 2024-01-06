@@ -62,3 +62,10 @@ Use shortcut script:
 ```bash
 make up
 ```
+
+## Stress test
+```bash
+cd app/app
+
+locust --class-picker --modern-ui --csv locust_stats/assessment
+```
