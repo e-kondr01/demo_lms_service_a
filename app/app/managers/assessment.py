@@ -98,14 +98,15 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
         unit_id: UUID | None = None,
         institution_id: UUID | None = None,
     ) -> list[AssessmentSchema]:
-        student_id_stmt = select(Assessment.student_id)
-        if unit_id:
-            student_id_stmt = student_id_stmt.where(Assessment.unit_id == unit_id)
-        student_ids = (await session.execute(student_id_stmt)).scalars().all()
-        filtered_student_ids = await service_b.get_student_ids(
-            {str(student_id) for student_id in student_ids},
-            institution_id=institution_id,
-        )
+        if institution_id:
+            student_id_stmt = select(Assessment.student_id)
+            if unit_id:
+                student_id_stmt = student_id_stmt.where(Assessment.unit_id == unit_id)
+            student_ids = (await session.execute(student_id_stmt)).scalars().all()
+            filtered_student_ids = await service_b.get_student_ids(
+                {str(student_id) for student_id in student_ids},
+                institution_id=institution_id,
+            )
 
         stmt = (
             select(Assessment)
@@ -116,10 +117,11 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
             .order_by(Assessment.created_at)
             .limit(page_size)
             .offset(page_size * (page_number - 1))
-            .where(Assessment.student_id.in_(filtered_student_ids))
         )
+        if institution_id:
+            stmt = stmt.where(Assessment.student_id.in_(filtered_student_ids))
         if unit_id:
-            student_id_stmt = student_id_stmt.where(Assessment.unit_id == unit_id)
+            stmt = stmt.where(Assessment.unit_id == unit_id)
         assessments = (await session.execute(stmt)).scalars().all()
         if not assessments:
             return []
