@@ -22,14 +22,16 @@ institution_ids = [
 
 class AssessmentUser(FastHttpUser):
     host = "http://127.0.0.1:8000"
-    wait_time = between(0.5, 1.5)
+    wait_time = between(0.5, 1)
 
 
 class CQRSAssessmentUser(AssessmentUser):
     @task
     def get_assessments(self):
-        url = "/api/assessments/cqrs?size=20"
-        page_number = randint(1, 178)
+        size = 80
+        url = f"/api/assessments/cqrs?size={size}"
+        max_page_number = int(3550 / size)
+        page_number = randint(1, max_page_number)
         url += f"&page={page_number}"
         unit_id = choice(unit_ids)
         if unit_id:
@@ -43,7 +45,8 @@ class CQRSAssessmentUser(AssessmentUser):
 class CyclicCompositionAssessmentUser(AssessmentUser):
     @task
     def get_assessments(self):
-        url = "/api/assessments/cyclic-api-composition?size=20"
+        size = 800
+        url = f"/api/assessments/cyclic-api-composition?size={size}"
         unit_id = choice(unit_ids)
         if unit_id:
             url += f"&unit_id={unit_id}"
@@ -56,8 +59,10 @@ class CyclicCompositionAssessmentUser(AssessmentUser):
 class PaginatedCompositionAssessmentUser(AssessmentUser):
     @task
     def get_assessments(self):
-        url = "/api/assessments/paginated-api-composition?size=20"
-        page_number = randint(1, 178)
+        size = 20
+        url = f"/api/assessments/paginated-api-composition?size={size}"
+        max_page_number = int(3550 / size)
+        page_number = randint(1, max_page_number)
         url += f"&page={page_number}"
         unit_id = choice(unit_ids)
         if unit_id:
