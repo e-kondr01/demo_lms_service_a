@@ -2,8 +2,6 @@ from random import choice, randint
 
 from locust import FastHttpUser, between, task
 
-# TODO: connection per request? connection pooling?
-
 unit_ids = [
     "18c44983-ecae-407c-86b8-b71bf2ac5469",
     "6eb162a3-0b9e-4e63-bf7c-32c34553d774",
@@ -24,7 +22,7 @@ institution_ids = [
 
 class AssessmentUser(FastHttpUser):
     host = "http://127.0.0.1:8000"
-    wait_time = between(0.5, 2)
+    wait_time = between(0.5, 1.5)
 
 
 class CQRSAssessmentUser(AssessmentUser):
