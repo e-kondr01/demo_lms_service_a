@@ -1,0 +1,9 @@
+models:
+  student:
+    aggr:
+      name: name
+      age: age
+      id: student_id
+    aggr2:
+      score: student_score
+      id: student_id
