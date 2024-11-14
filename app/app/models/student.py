@@ -13,5 +13,7 @@ if TYPE_CHECKING:
 class Student(Base):
     name: Mapped[str] = mapped_column(String(63))
 
-    institution_id: Mapped[UUID] = mapped_column(ForeignKey("institution.id"))
+    institution_id: Mapped[UUID] = mapped_column(
+        ForeignKey("institution.id"), index=True
+    )
     institution: Mapped["Institution"] = relationship()

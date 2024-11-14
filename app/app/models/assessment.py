@@ -12,12 +12,10 @@ if TYPE_CHECKING:
 
 
 class Assessment(Base):
-    unit_id: Mapped[UUID] = mapped_column(
-        ForeignKey("unit.id"),
-    )
+    unit_id: Mapped[UUID] = mapped_column(ForeignKey("unit.id"), index=True)
     unit: Mapped["Unit"] = relationship()
 
-    student_id: Mapped[UUID] = mapped_column(ForeignKey("student.id"))
+    student_id: Mapped[UUID] = mapped_column(ForeignKey("student.id"), index=True)
     student: Mapped["Student"] = relationship()
 
     grade: Mapped[int | None]
