@@ -21,6 +21,9 @@ class Settings(BaseSettings):
 
     SENTRY_DSN: str | None = None
 
+    SERVICE_B_HOST: str = "http://127.0.0.1:8001"
+    SERVICE_C_HOST: str = "http://127.0.0.1:8002"
+
     @field_validator("SQLALCHEMY_DATABASE_URL", mode="before")
     def assemble_db_connection_string(
         cls, value: PostgresDsn | None, info: ValidationInfo
