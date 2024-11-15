@@ -1,3 +1,4 @@
+from asyncio import TaskGroup
 from datetime import datetime
 from uuid import UUID
 
@@ -164,18 +165,19 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
                 return filtered_result
 
             student_ids = set()
-            unit_ids = set()
             for assessment in assessments:
                 student_ids.add(str(assessment.student_id))
-                unit_ids.add(str(assessment.unit_id))
 
-            # TODO: распараллелить?
             students_by_id = await service_b.get_students(
                 student_ids,
                 institution_id=institution_id,
                 limit=page_size - len(filtered_result),
             )
 
+            unit_ids = set()
+            for assessment in assessments:
+                if assessment.student_id in students_by_id:
+                    unit_ids.add(str(assessment.unit_id))
             units_by_id = await service_c.get_units(
                 unit_ids,
                 name=unit_name,
@@ -208,14 +210,15 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
             student_id_stmt = select(Assessment.student_id)
             student_ids = (await session.execute(student_id_stmt)).scalars().all()
 
-            # TODO: распараллелить?
             filtered_student_ids = await service_b.get_student_ids(
                 {str(student_id) for student_id in student_ids},
                 institution_id=institution_id,
             )
 
         if unit_name:
-            unit_id_stmt = select(Assessment.unit_id)
+            unit_id_stmt = select(Assessment.unit_id).where(
+                Assessment.student_id.in_(filtered_student_ids)
+            )
             unit_ids = (await session.execute(unit_id_stmt)).scalars().all()
             filtered_unit_ids = await service_c.get_unit_ids(
                 {str(unit_id) for unit_id in unit_ids},
@@ -232,18 +235,29 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
             stmt = stmt.where(Assessment.student_id.in_(filtered_student_ids))
         if unit_name:
             stmt = stmt.where(Assessment.unit_id.in_(filtered_unit_ids))
+
         assessments = (await session.execute(stmt)).scalars().all()
         if not assessments:
             return []
-        result_student_ids = {str(assessment.student_id) for assessment in assessments}
-        students_by_id = await service_b.get_students(
-            result_student_ids,
-        )
 
-        result_unit_ids = {str(assessment.unit_id) for assessment in assessments}
-        units_by_id = await service_c.get_units(
-            result_unit_ids,
-        )
+        async with TaskGroup() as tg:
+            result_student_ids = {
+                str(assessment.student_id) for assessment in assessments
+            }
+            students_task = tg.create_task(
+                service_b.get_students(
+                    result_student_ids,
+                )
+            )
+
+            result_unit_ids = {str(assessment.unit_id) for assessment in assessments}
+            units_task = tg.create_task(
+                service_c.get_units(
+                    result_unit_ids,
+                )
+            )
+        students_by_id = students_task.result()
+        units_by_id = units_task.result()
 
         result = []
         for assessment in assessments:
