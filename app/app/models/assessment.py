@@ -29,3 +29,40 @@ class Assessment(Base):
             "student_id", "unit_id", name="unique_assessment_for_student_and_unit"
         ),
     )
+
+
+class AssessmentFDWTwoServices(Base):
+    unit_id: Mapped[UUID] = mapped_column(ForeignKey("unit.id"), index=True)
+    unit: Mapped["Unit"] = relationship()
+
+    student_id: Mapped[UUID] = mapped_column(index=True)
+
+    grade: Mapped[int | None]
+
+    __table_args__ = (
+        CheckConstraint(
+            "grade >= 0 and grade <= 100",
+            name="grade_range",
+        ),
+        UniqueConstraint(
+            "student_id", "unit_id", name="unique_assessment_for_student_and_unit"
+        ),
+    )
+
+
+class AssessmentFDWThreeServices(Base):
+    unit_id: Mapped[UUID] = mapped_column(index=True)
+
+    student_id: Mapped[UUID] = mapped_column(index=True)
+
+    grade: Mapped[int | None]
+
+    __table_args__ = (
+        CheckConstraint(
+            "grade >= 0 and grade <= 100",
+            name="grade_range",
+        ),
+        UniqueConstraint(
+            "student_id", "unit_id", name="unique_assessment_for_student_and_unit"
+        ),
+    )

@@ -9,10 +9,38 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager
 
-from app.models import Assessment, Student, Unit
+from app.models import (
+    Assessment,
+    AssessmentFDWThreeServices,
+    AssessmentFDWTwoServices,
+    Student,
+    Unit,
+)
+from app.models.institution import ForeignInstitution
+from app.models.student import ForeignStudent
+from app.models.unit import ForeignUnit
 from app.schemas import AssessmentSchema
 from app.services.service_b import service_b
 from app.services.service_c import service_c
+
+
+def two_services_fdw_row_to_assessment(rows) -> list[AssessmentFDWTwoServices]:
+    formatted_rows = []
+    for row in rows:
+        row.ForeignStudent.institution = row.ForeignInstitution
+        row.AssessmentFDWTwoServices.student = row.ForeignStudent
+        formatted_rows.append(row.AssessmentFDWTwoServices)
+    return formatted_rows
+
+
+def three_services_fdw_row_to_assessment(rows) -> list[AssessmentFDWThreeServices]:
+    formatted_rows = []
+    for row in rows:
+        row.ForeignStudent.institution = row.ForeignInstitution
+        row.AssessmentFDWThreeServices.student = row.ForeignStudent
+        row.AssessmentFDWThreeServices.unit = row.ForeignUnit
+        formatted_rows.append(row.AssessmentFDWThreeServices)
+    return formatted_rows
 
 
 class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSchema]):
@@ -40,6 +68,80 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
             stmt = stmt.filter(Student.institution_id == institution_id)
 
         return await paginate(session, stmt)
+
+    async def get_list_fdw_two_services(
+        self,
+        session: AsyncSession,
+        unit_id: UUID | None = None,
+        institution_id: UUID | None = None,
+    ) -> Page[AssessmentFDWTwoServices]:
+        stmt = (
+            select(AssessmentFDWTwoServices, ForeignStudent, ForeignInstitution)
+            .join_from(
+                AssessmentFDWTwoServices,
+                ForeignStudent,
+                AssessmentFDWTwoServices.student_id == ForeignStudent.id,
+            )
+            .join_from(
+                ForeignStudent,
+                ForeignInstitution,
+                ForeignStudent.institution_id == ForeignInstitution.id,
+            )
+            .join(AssessmentFDWTwoServices.unit)
+            .options(
+                contains_eager(AssessmentFDWTwoServices.unit),
+            )
+            .order_by(AssessmentFDWTwoServices.created_at)
+        )
+
+        if unit_id:
+            stmt = stmt.filter(Unit.id == unit_id)
+
+        if institution_id:
+            stmt = stmt.filter(ForeignStudent.institution_id == institution_id)
+
+        return await paginate(
+            session, stmt, transformer=two_services_fdw_row_to_assessment
+        )
+
+    async def get_list_fdw_three_services(
+        self,
+        session: AsyncSession,
+        unit_id: UUID | None = None,
+        institution_id: UUID | None = None,
+    ) -> Page[AssessmentFDWThreeServices]:
+        stmt = (
+            select(
+                AssessmentFDWThreeServices,
+                ForeignStudent,
+                ForeignInstitution,
+                ForeignUnit,
+            )
+            .join_from(
+                AssessmentFDWThreeServices,
+                ForeignUnit,
+                AssessmentFDWThreeServices.unit_id == ForeignUnit.id,
+            )
+            .join(
+                ForeignStudent,
+                AssessmentFDWThreeServices.student_id == ForeignStudent.id,
+            )
+            .join(
+                ForeignInstitution,
+                ForeignStudent.institution_id == ForeignInstitution.id,
+            )
+            .order_by(AssessmentFDWThreeServices.created_at)
+        )
+
+        if unit_id:
+            stmt = stmt.filter(ForeignUnit.id == unit_id)
+
+        if institution_id:
+            stmt = stmt.filter(ForeignStudent.institution_id == institution_id)
+
+        return await paginate(
+            session, stmt, transformer=three_services_fdw_row_to_assessment
+        )
 
     async def get_list_cyclic_api_composition_two_services(
         self,

@@ -6,3 +6,7 @@ from app.models import Base
 
 class Unit(Base):
     name: Mapped[str] = mapped_column(String(255))
+
+
+class ForeignUnit(Base):
+    name: Mapped[str] = mapped_column(String(255))

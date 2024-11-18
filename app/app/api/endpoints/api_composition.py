@@ -2,7 +2,6 @@ from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter
-from fastapi_pagination import Page
 
 from app.api.deps import Session
 from app.managers.assessment import assessment_manager
@@ -11,18 +10,7 @@ from app.schemas import AssessmentSchema
 router = APIRouter()
 
 
-@router.get("/shared")
-async def get_assessments_shared(
-    session: Session,
-    unit_id: UUID | None = None,
-    institution_id: UUID | None = None,
-) -> Page[AssessmentSchema]:
-    return await assessment_manager.get_list_shared_db(
-        session, unit_id=unit_id, institution_id=institution_id
-    )  # type: ignore
-
-
-@router.get("/two-services-cyclic-api-composition")
+@router.get("/two-services/cyclic")
 async def get_assessments_cyclic(
     session: Session,
     size: int = 20,
@@ -39,8 +27,8 @@ async def get_assessments_cyclic(
     )
 
 
-@router.get("/two-services-prefilter-api-composition")
-async def get_paginated_assessments_api_composition(
+@router.get("/two-services/prefilter")
+async def get_prefilter_assessments_api_composition(
     session: Session,
     size: int = 20,
     page: int = 1,
@@ -56,7 +44,7 @@ async def get_paginated_assessments_api_composition(
     )
 
 
-@router.get("/three-services-cyclic-api-composition")
+@router.get("/three-services/cyclic")
 async def get_assessments_cyclic_three_services(
     session: Session,
     size: int = 20,
@@ -73,8 +61,8 @@ async def get_assessments_cyclic_three_services(
     )
 
 
-@router.get("/three-services-prefilter-api-composition")
-async def get_paginated_assessments_api_composition_three_services(
+@router.get("/three-services/prefilter")
+async def get_prefilter_assessments_api_composition_three_services(
     session: Session,
     size: int = 20,
     page: int = 1,
