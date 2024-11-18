@@ -84,9 +84,9 @@ async def generate_assessments(session: AsyncSession):
 
 async def main():
     async with async_session_factory() as session:
-        await generate_institutions(session)
-        await generate_units(session)
-        await generate_students(session)
+        # await generate_institutions(session)
+        # await generate_units(session)
+        # await generate_students(session)
         await generate_assessments(session)
 
 

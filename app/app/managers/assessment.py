@@ -16,9 +16,11 @@ from app.models import (
     Student,
     Unit,
 )
-from app.models.institution import ForeignInstitution
-from app.models.student import ForeignStudent
-from app.models.unit import ForeignUnit
+
+# from app.models.institution import ServiceBInstitution
+# from app.models.student import ServiceBStudent
+# from app.models.unit import ForeignUnit
+from app.models.foreign import ForeignUnit, ServiceBInstitution, ServiceBStudent
 from app.schemas import AssessmentSchema
 from app.services.service_b import service_b
 from app.services.service_c import service_c
@@ -27,8 +29,8 @@ from app.services.service_c import service_c
 def two_services_fdw_row_to_assessment(rows) -> list[AssessmentFDWTwoServices]:
     formatted_rows = []
     for row in rows:
-        row.ForeignStudent.institution = row.ForeignInstitution
-        row.AssessmentFDWTwoServices.student = row.ForeignStudent
+        row.ServiceBStudent.institution = row.ServiceBInstitution
+        row.AssessmentFDWTwoServices.student = row.ServiceBStudent
         formatted_rows.append(row.AssessmentFDWTwoServices)
     return formatted_rows
 
@@ -36,8 +38,8 @@ def two_services_fdw_row_to_assessment(rows) -> list[AssessmentFDWTwoServices]:
 def three_services_fdw_row_to_assessment(rows) -> list[AssessmentFDWThreeServices]:
     formatted_rows = []
     for row in rows:
-        row.ForeignStudent.institution = row.ForeignInstitution
-        row.AssessmentFDWThreeServices.student = row.ForeignStudent
+        row.ServiceBStudent.institution = row.ServiceBInstitution
+        row.AssessmentFDWThreeServices.student = row.ServiceBStudent
         row.AssessmentFDWThreeServices.unit = row.ForeignUnit
         formatted_rows.append(row.AssessmentFDWThreeServices)
     return formatted_rows
@@ -76,16 +78,16 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
         institution_id: UUID | None = None,
     ) -> Page[AssessmentFDWTwoServices]:
         stmt = (
-            select(AssessmentFDWTwoServices, ForeignStudent, ForeignInstitution)
+            select(AssessmentFDWTwoServices, ServiceBStudent, ServiceBInstitution)
             .join_from(
                 AssessmentFDWTwoServices,
-                ForeignStudent,
-                AssessmentFDWTwoServices.student_id == ForeignStudent.id,
+                ServiceBStudent,
+                AssessmentFDWTwoServices.student_id == ServiceBStudent.id,
             )
             .join_from(
-                ForeignStudent,
-                ForeignInstitution,
-                ForeignStudent.institution_id == ForeignInstitution.id,
+                ServiceBStudent,
+                ServiceBInstitution,
+                ServiceBStudent.institution_id == ServiceBInstitution.id,
             )
             .join(AssessmentFDWTwoServices.unit)
             .options(
@@ -98,7 +100,7 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
             stmt = stmt.filter(Unit.id == unit_id)
 
         if institution_id:
-            stmt = stmt.filter(ForeignStudent.institution_id == institution_id)
+            stmt = stmt.filter(ServiceBStudent.institution_id == institution_id)
 
         return await paginate(
             session, stmt, transformer=two_services_fdw_row_to_assessment
@@ -113,8 +115,8 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
         stmt = (
             select(
                 AssessmentFDWThreeServices,
-                ForeignStudent,
-                ForeignInstitution,
+                ServiceBStudent,
+                ServiceBInstitution,
                 ForeignUnit,
             )
             .join_from(
@@ -123,12 +125,12 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
                 AssessmentFDWThreeServices.unit_id == ForeignUnit.id,
             )
             .join(
-                ForeignStudent,
-                AssessmentFDWThreeServices.student_id == ForeignStudent.id,
+                ServiceBStudent,
+                AssessmentFDWThreeServices.student_id == ServiceBStudent.id,
             )
             .join(
-                ForeignInstitution,
-                ForeignStudent.institution_id == ForeignInstitution.id,
+                ServiceBInstitution,
+                ServiceBStudent.institution_id == ServiceBInstitution.id,
             )
             .order_by(AssessmentFDWThreeServices.created_at)
         )
@@ -137,7 +139,7 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
             stmt = stmt.filter(ForeignUnit.id == unit_id)
 
         if institution_id:
-            stmt = stmt.filter(ForeignStudent.institution_id == institution_id)
+            stmt = stmt.filter(ServiceBStudent.institution_id == institution_id)
 
         return await paginate(
             session, stmt, transformer=three_services_fdw_row_to_assessment

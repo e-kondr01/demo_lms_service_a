@@ -45,7 +45,9 @@ class AssessmentFDWTwoServices(Base):
             name="grade_range",
         ),
         UniqueConstraint(
-            "student_id", "unit_id", name="unique_assessment_for_student_and_unit"
+            "student_id",
+            "unit_id",
+            name="unique_assessment_two_fdw_for_student_and_unit",
         ),
     )
 
@@ -63,6 +65,8 @@ class AssessmentFDWThreeServices(Base):
             name="grade_range",
         ),
         UniqueConstraint(
-            "student_id", "unit_id", name="unique_assessment_for_student_and_unit"
+            "student_id",
+            "unit_id",
+            name="unique_assessment_three_fdw_for_student_and_unit",
         ),
     )
