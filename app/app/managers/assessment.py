@@ -16,11 +16,7 @@ from app.models import (
     Student,
     Unit,
 )
-
-# from app.models.institution import ServiceBInstitution
-# from app.models.student import ServiceBStudent
-# from app.models.unit import ForeignUnit
-from app.models.foreign import ForeignUnit, ServiceBInstitution, ServiceBStudent
+from app.models.foreign import ServiceBInstitution, ServiceBStudent, ServiceCUnit
 from app.schemas import AssessmentSchema
 from app.services.service_b import service_b
 from app.services.service_c import service_c
@@ -40,7 +36,7 @@ def three_services_fdw_row_to_assessment(rows) -> list[AssessmentFDWThreeService
     for row in rows:
         row.ServiceBStudent.institution = row.ServiceBInstitution
         row.AssessmentFDWThreeServices.student = row.ServiceBStudent
-        row.AssessmentFDWThreeServices.unit = row.ForeignUnit
+        row.AssessmentFDWThreeServices.unit = row.ServiceCUnit
         formatted_rows.append(row.AssessmentFDWThreeServices)
     return formatted_rows
 
@@ -117,12 +113,12 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
                 AssessmentFDWThreeServices,
                 ServiceBStudent,
                 ServiceBInstitution,
-                ForeignUnit,
+                ServiceCUnit,
             )
             .join_from(
                 AssessmentFDWThreeServices,
-                ForeignUnit,
-                AssessmentFDWThreeServices.unit_id == ForeignUnit.id,
+                ServiceCUnit,
+                AssessmentFDWThreeServices.unit_id == ServiceCUnit.id,
             )
             .join(
                 ServiceBStudent,
@@ -136,7 +132,7 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
         )
 
         if unit_id:
-            stmt = stmt.filter(ForeignUnit.id == unit_id)
+            stmt = stmt.filter(ServiceCUnit.id == unit_id)
 
         if institution_id:
             stmt = stmt.filter(ServiceBStudent.institution_id == institution_id)

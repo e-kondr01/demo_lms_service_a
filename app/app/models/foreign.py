@@ -19,5 +19,5 @@ class ServiceBStudent(Base):
     institution: Mapped["ServiceBInstitution"] = relationship()
 
 
-class ForeignUnit(Base):
+class ServiceCUnit(Base):
     name: Mapped[str] = mapped_column(String(255))

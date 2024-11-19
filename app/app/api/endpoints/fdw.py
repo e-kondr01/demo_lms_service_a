@@ -21,7 +21,7 @@ async def get_assessments_fdw_two_services(
     )  # type: ignore
 
 
-@router.get("/two-services")
+@router.get("/three-services")
 async def get_assessments_fdw_three_services(
     session: Session,
     unit_id: UUID | None = None,
