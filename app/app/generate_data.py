@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime
 from random import randint
+from uuid import UUID
 
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -15,9 +16,21 @@ from app.models import (
     Unit,
 )
 
+institution_names = (
+    "ИТМО",
+    "ТюмГУ",
+    "Политех",
+    "МГУ",
+    "МФТИ",
+    "СПбГУ",
+    "МИФИ",
+    "МГУТ им. Баумана",
+    "ВШЭ",
+    "МГИМО",
+)
+
 
 async def generate_institutions(session: AsyncSession):
-    institution_names = ("ИТМО", "ТюмГУ", "Политех", "ФТМИ")
     for name in institution_names:
         institution = Institution(name=name)
         session.add(institution)
@@ -25,41 +38,23 @@ async def generate_institutions(session: AsyncSession):
 
 
 async def generate_units(session: AsyncSession):
-    unit_names = ("Первый", "Второй", "Третий", "Четвёртый", "Пятый")
-    for name in unit_names:
+    for i in range(1, 101):
+        name = f"Задание {i}"
         unit = Unit(name=name)
         session.add(unit)
-        await session.commit()
+    await session.commit()
 
 
 async def generate_students(session: AsyncSession):
-    institution = (
-        await session.execute(select(Institution).filter_by(name="ИТМО"))
-    ).scalar_one()
-    for i in range(200):
-        student = Student(name=f"Студент ИТМО {i+1}", institution_id=institution.id)
-        session.add(student)
-
-    institution = (
-        await session.execute(select(Institution).filter_by(name="ТюмГУ"))
-    ).scalar_one()
-    for i in range(100):
-        student = Student(name=f"Студент ТюмГУ {i+1}", institution_id=institution.id)
-        session.add(student)
-
-    institution = (
-        await session.execute(select(Institution).filter_by(name="Политех"))
-    ).scalar_one()
-    for i in range(180):
-        student = Student(name=f"Студент Политеха {i+1}", institution_id=institution.id)
-        session.add(student)
-
-    institution = (
-        await session.execute(select(Institution).filter_by(name="ФТМИ"))
-    ).scalar_one()
-    for i in range(230):
-        student = Student(name=f"Студент ФТМИ {i+1}", institution_id=institution.id)
-        session.add(student)
+    for index, name in enumerate(institution_names):
+        institution = (
+            await session.execute(select(Institution).filter_by(name=name))
+        ).scalar_one()
+        for i in range(1, (index + 1) * 100 + 1):
+            student = Student(
+                name=f"Студент {institution.name} {i+1}", institution_id=institution.id
+            )
+            session.add(student)
 
     await session.commit()
 
@@ -69,21 +64,26 @@ async def generate_assessments(session: AsyncSession):
     units = (
         (await session.execute(select(Unit).order_by(Unit.created_at))).scalars().all()
     )
-    students_assessments = {student.id: 0 for student in students}
-    assessments_to_create = []
+    students_assessments: dict[UUID, set[int]] = {
+        student.id: set() for student in students
+    }
+    assessments_to_create: list[Assessment] = []
 
-    while len(assessments_to_create) != len(students) * len(units):
+    while len(assessments_to_create) != len(students) * len(units) * 0.5:
         student_index = randint(0, len(students) - 1)
         student = students[student_index]
 
-        if students_assessments[student.id] != 5:
-            unit_index = students_assessments[student.id]
+        if len(students_assessments[student.id]) != len(units):
+            unit_index = randint(0, len(units) - 1)
+            if unit_index in students_assessments[student.id]:
+                continue
+
             unit = units[unit_index]
             assessment = Assessment(
                 unit_id=unit.id, student_id=student.id, created_at=datetime.now()
             )
             assessments_to_create.append(assessment)
-            students_assessments[student.id] += 1
+            students_assessments[student.id].add(unit_index)
 
     session.add_all(assessments_to_create)
     await session.commit()
@@ -184,12 +184,12 @@ async def generate_assessments_fdw_three_services(session: AsyncSession):
 
 async def main():
     async with async_session_factory() as session:
-        # await generate_institutions(session)
-        # await generate_units(session)
-        # await generate_students(session)
-        # await generate_assessments(session)
+        await generate_institutions(session)
+        await generate_units(session)
+        await generate_students(session)
+        await generate_assessments(session)
         # await generate_assessments_fdw_two_services(session)
-        await generate_assessments_fdw_three_services(session)
+        # await generate_assessments_fdw_three_services(session)
 
 
 asyncio.run(main())
