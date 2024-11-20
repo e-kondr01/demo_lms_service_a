@@ -152,18 +152,20 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
         filtered_result: list[AssessmentSchema] = []
 
         base_stmt = (
-            select(Assessment)
-            .join(Assessment.unit)
+            select(AssessmentFDWTwoServices)
+            .join(AssessmentFDWTwoServices.unit)
             .options(
-                contains_eager(Assessment.unit),
+                contains_eager(AssessmentFDWTwoServices.unit),
             )
-            .order_by(Assessment.created_at)
+            .order_by(AssessmentFDWTwoServices.created_at)
             .limit(page_size)
         )
         if unit_id:
             base_stmt = base_stmt.filter(Unit.id == unit_id)
         if previous_created_at:
-            base_stmt = base_stmt.filter(Assessment.created_at > previous_created_at)
+            base_stmt = base_stmt.filter(
+                AssessmentFDWTwoServices.created_at > previous_created_at
+            )
 
         offset = 0
         while True:
@@ -171,6 +173,7 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
             assessments = (await session.execute(stmt)).scalars().all()
             if not assessments:
                 return filtered_result
+
             student_ids = {str(assessment.student_id) for assessment in assessments}
             students_by_id = await service_b.get_students(
                 student_ids,
@@ -200,29 +203,33 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
         institution_id: UUID | None = None,
     ) -> list[AssessmentSchema]:
         if institution_id:
-            student_id_stmt = select(Assessment.student_id)
+            student_id_stmt = select(AssessmentFDWTwoServices.student_id).distinct()
             if unit_id:
-                student_id_stmt = student_id_stmt.where(Assessment.unit_id == unit_id)
-            student_ids = (await session.execute(student_id_stmt)).scalars().all()
+                student_id_stmt = student_id_stmt.where(
+                    AssessmentFDWTwoServices.unit_id == unit_id
+                )
+            student_ids = (await session.execute(student_id_stmt)).scalars()
             filtered_student_ids = await service_b.get_student_ids(
                 {str(student_id) for student_id in student_ids},
                 institution_id=institution_id,
             )
 
         stmt = (
-            select(Assessment)
-            .join(Assessment.unit)
+            select(AssessmentFDWTwoServices)
+            .join(AssessmentFDWTwoServices.unit)
             .options(
-                contains_eager(Assessment.unit),
+                contains_eager(AssessmentFDWTwoServices.unit),
             )
-            .order_by(Assessment.created_at)
+            .order_by(AssessmentFDWTwoServices.created_at)
             .limit(page_size)
             .offset(page_size * (page_number - 1))
         )
         if institution_id:
-            stmt = stmt.where(Assessment.student_id.in_(filtered_student_ids))
+            stmt = stmt.where(
+                AssessmentFDWTwoServices.student_id.in_(filtered_student_ids)
+            )
         if unit_id:
-            stmt = stmt.where(Assessment.unit_id == unit_id)
+            stmt = stmt.where(AssessmentFDWTwoServices.unit_id == unit_id)
         assessments = (await session.execute(stmt)).scalars().all()
         if not assessments:
             return []
@@ -253,9 +260,15 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
     ) -> list[AssessmentSchema]:
         filtered_result: list[AssessmentSchema] = []
 
-        base_stmt = select(Assessment).order_by(Assessment.created_at).limit(page_size)
+        base_stmt = (
+            select(AssessmentFDWThreeServices)
+            .order_by(AssessmentFDWThreeServices.created_at)
+            .limit(page_size)
+        )
         if previous_created_at:
-            base_stmt = base_stmt.filter(Assessment.created_at > previous_created_at)
+            base_stmt = base_stmt.filter(
+                AssessmentFDWThreeServices.created_at > previous_created_at
+            )
 
         offset = 0
         while True:
@@ -278,14 +291,20 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
             for assessment in assessments:
                 if assessment.student_id in students_by_id:
                     unit_ids.add(str(assessment.unit_id))
-            units_by_id = await service_c.get_units(
-                unit_ids,
-                name=unit_name,
-                limit=page_size - len(filtered_result),
-            )
+            if unit_ids:
+                units_by_id = await service_c.get_units(
+                    unit_ids,
+                    name=unit_name,
+                    limit=page_size - len(filtered_result),
+                )
+            else:
+                units_by_id = dict()
 
             for assessment in assessments:
-                if assessment.student_id in students_by_id and units_by_id:
+                if (
+                    assessment.student_id in students_by_id
+                    and assessment.unit_id in units_by_id
+                ):
                     filtered_result.append(
                         AssessmentSchema(
                             unit=units_by_id[assessment.unit_id],
@@ -307,8 +326,8 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
         institution_id: UUID | None = None,
     ) -> list[AssessmentSchema]:
         if institution_id:
-            student_id_stmt = select(Assessment.student_id)
-            student_ids = (await session.execute(student_id_stmt)).scalars().all()
+            student_id_stmt = select(AssessmentFDWThreeServices.student_id).distinct()
+            student_ids = (await session.execute(student_id_stmt)).scalars()
 
             filtered_student_ids = await service_b.get_student_ids(
                 {str(student_id) for student_id in student_ids},
@@ -316,25 +335,29 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
             )
 
         if unit_name:
-            unit_id_stmt = select(Assessment.unit_id).where(
-                Assessment.student_id.in_(filtered_student_ids)
+            unit_id_stmt = (
+                select(AssessmentFDWThreeServices.unit_id)
+                .where(AssessmentFDWThreeServices.student_id.in_(filtered_student_ids))
+                .distinct()
             )
-            unit_ids = (await session.execute(unit_id_stmt)).scalars().all()
+            unit_ids = (await session.execute(unit_id_stmt)).scalars()
             filtered_unit_ids = await service_c.get_unit_ids(
                 {str(unit_id) for unit_id in unit_ids},
-                unit_name=unit_name,
+                name=unit_name,
             )
 
         stmt = (
-            select(Assessment)
-            .order_by(Assessment.created_at)
+            select(AssessmentFDWThreeServices)
+            .order_by(AssessmentFDWThreeServices.created_at)
             .limit(page_size)
             .offset(page_size * (page_number - 1))
         )
         if institution_id:
-            stmt = stmt.where(Assessment.student_id.in_(filtered_student_ids))
+            stmt = stmt.where(
+                AssessmentFDWThreeServices.student_id.in_(filtered_student_ids)
+            )
         if unit_name:
-            stmt = stmt.where(Assessment.unit_id.in_(filtered_unit_ids))
+            stmt = stmt.where(AssessmentFDWThreeServices.unit_id.in_(filtered_unit_ids))
 
         assessments = (await session.execute(stmt)).scalars().all()
         if not assessments:

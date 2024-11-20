@@ -6,7 +6,14 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.db import async_session_factory
-from app.models import Assessment, AssessmentFDWTwoServices, Institution, Student, Unit
+from app.models import (
+    Assessment,
+    AssessmentFDWThreeServices,
+    AssessmentFDWTwoServices,
+    Institution,
+    Student,
+    Unit,
+)
 
 
 async def generate_institutions(session: AsyncSession):
@@ -121,13 +128,68 @@ async def generate_assessments_fdw_two_services(session: AsyncSession):
     await session.commit()
 
 
+async def generate_assessments_fdw_three_services(session: AsyncSession):
+    engine = create_async_engine(
+        "postgresql+asyncpg://postgres:postgres@192.168.0.114:5433/service_b",
+        echo=False,
+        connect_args={"server_settings": {"jit": "off"}},
+    )
+
+    async_session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with async_session_factory() as service_b_session:
+        student_ids = (
+            (await service_b_session.execute(text("SELECT id FROM servicebstudent;")))
+            .scalars()
+            .all()
+        )
+
+    # We do a little bit of hiding
+    engine = create_async_engine(
+        "",
+        echo=False,
+        connect_args={"server_settings": {"jit": "off"}},
+    )
+
+    async_session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with async_session_factory() as service_c_session:
+        unit_ids = (
+            (
+                await service_c_session.execute(
+                    text("SELECT id FROM servicecunit ORDER BY created_at;")
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    students_assessments = {student_id: 0 for student_id in student_ids}
+    assessments_to_create = []
+
+    while len(assessments_to_create) != len(student_ids) * len(unit_ids):
+        student_index = randint(0, len(student_ids) - 1)
+        student_id = student_ids[student_index]
+
+        if students_assessments[student_id] != 5:
+            unit_index = students_assessments[student_id]
+            unit_id = unit_ids[unit_index]
+            assessment = AssessmentFDWThreeServices(
+                unit_id=unit_id, student_id=student_id, created_at=datetime.now()
+            )
+            assessments_to_create.append(assessment)
+            students_assessments[student_id] += 1
+
+    session.add_all(assessments_to_create)
+    await session.commit()
+
+
 async def main():
     async with async_session_factory() as session:
         # await generate_institutions(session)
         # await generate_units(session)
         # await generate_students(session)
         # await generate_assessments(session)
-        await generate_assessments_fdw_two_services(session)
+        # await generate_assessments_fdw_two_services(session)
+        await generate_assessments_fdw_three_services(session)
 
 
 asyncio.run(main())
