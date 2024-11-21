@@ -67,5 +67,5 @@ make up
 ```bash
 cd app/app
 
-locust --class-picker --modern-ui --csv locust_stats/assessment
+locust --class-picker -f app/locustfile.py --csv locust_stats/assessment
 ```

@@ -24,9 +24,13 @@ async def get_assessments_fdw_two_services(
 @router.get("/three-services")
 async def get_assessments_fdw_three_services(
     session: Session,
-    unit_id: UUID | None = None,
+    unit_name: str | None = None,
     institution_id: UUID | None = None,
+    assessment_grade: int | None = None,
 ) -> Page[AssessmentSchema]:
     return await assessment_manager.get_list_fdw_three_services(
-        session, unit_id=unit_id, institution_id=institution_id
+        session,
+        unit_name=unit_name,
+        institution_id=institution_id,
+        assessment_grade=assessment_grade,
     )  # type: ignore

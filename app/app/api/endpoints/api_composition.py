@@ -51,6 +51,7 @@ async def get_assessments_cyclic_three_services(
     previous_created_at: datetime | None = None,
     institution_id: UUID | None = None,
     unit_name: str | None = None,
+    assessment_grade: int | None = None,
 ) -> list[AssessmentSchema]:
     return await assessment_manager.get_list_cyclic_api_composition_three_services(
         session,
@@ -58,6 +59,7 @@ async def get_assessments_cyclic_three_services(
         previous_created_at=previous_created_at,
         institution_id=institution_id,
         unit_name=unit_name,
+        assessment_grade=assessment_grade,
     )
 
 
@@ -68,6 +70,7 @@ async def get_prefilter_assessments_api_composition_three_services(
     page: int = 1,
     institution_id: UUID | None = None,
     unit_name: str | None = None,
+    assessment_grade: int | None = None,
 ) -> list[AssessmentSchema]:
     return await assessment_manager.get_prefilter_list_api_composition_three_services(
         session,
@@ -75,4 +78,5 @@ async def get_prefilter_assessments_api_composition_three_services(
         page_number=page,
         institution_id=institution_id,
         unit_name=unit_name,
+        assessment_grade=assessment_grade,
     )

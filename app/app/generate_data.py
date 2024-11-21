@@ -79,8 +79,13 @@ async def generate_assessments(session: AsyncSession):
                 continue
 
             unit = units[unit_index]
+
+            grade = randint(1, 5)
             assessment = Assessment(
-                unit_id=unit.id, student_id=student.id, created_at=datetime.now()
+                unit_id=unit.id,
+                student_id=student.id,
+                created_at=datetime.now(),
+                grade=grade,
             )
             assessments_to_create.append(assessment)
             students_assessments[student.id].add(unit_index)
@@ -124,8 +129,12 @@ async def generate_assessments_fdw_two_services(session: AsyncSession):
                 continue
 
             unit = units[unit_index]
+            grade = randint(1, 5)
             assessment = AssessmentFDWTwoServices(
-                unit_id=unit.id, student_id=student_id, created_at=datetime.now()
+                unit_id=unit.id,
+                student_id=student_id,
+                created_at=datetime.now(),
+                grade=grade,
             )
             assessments_to_create.append(assessment)
             students_assessments[student_id].add(unit_index)
@@ -183,8 +192,12 @@ async def generate_assessments_fdw_three_services(session: AsyncSession):
                 continue
 
             unit_id = unit_ids[unit_index]
+            grade = randint(1, 5)
             assessment = AssessmentFDWThreeServices(
-                unit_id=unit_id, student_id=student_id, created_at=datetime.now()
+                unit_id=unit_id,
+                student_id=student_id,
+                created_at=datetime.now(),
+                grade=grade,
             )
             assessments_to_create.append(assessment)
             students_assessments[student_id].add(unit_index)
@@ -195,9 +208,9 @@ async def generate_assessments_fdw_three_services(session: AsyncSession):
 
 async def main():
     async with async_session_factory() as session:
-        await generate_institutions(session)
-        await generate_units(session)
-        await generate_students(session)
+        # await generate_institutions(session)
+        # await generate_units(session)
+        # await generate_students(session)
         await generate_assessments(session)
         await generate_assessments_fdw_two_services(session)
         await generate_assessments_fdw_three_services(session)

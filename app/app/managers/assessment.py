@@ -105,8 +105,9 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
     async def get_list_fdw_three_services(
         self,
         session: AsyncSession,
-        unit_id: UUID | None = None,
+        unit_name: str | None = None,
         institution_id: UUID | None = None,
+        assessment_grade: int | None = None,
     ) -> Page[AssessmentFDWThreeServices]:
         stmt = (
             select(
@@ -131,11 +132,14 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
             .order_by(AssessmentFDWThreeServices.created_at)
         )
 
-        if unit_id:
-            stmt = stmt.filter(ServiceCUnit.id == unit_id)
+        if unit_name:
+            stmt = stmt.filter(ServiceCUnit.name == unit_name)
 
         if institution_id:
             stmt = stmt.filter(ServiceBStudent.institution_id == institution_id)
+
+        if assessment_grade:
+            stmt = stmt.filter(AssessmentFDWThreeServices.grade == assessment_grade)
 
         return await paginate(
             session, stmt, transformer=three_services_fdw_row_to_assessment
@@ -257,6 +261,7 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
         previous_created_at: datetime | None = None,
         institution_id: UUID | None = None,
         unit_name: str | None = None,
+        assessment_grade: int | None = None,
     ) -> list[AssessmentSchema]:
         filtered_result: list[AssessmentSchema] = []
 
@@ -268,6 +273,10 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
         if previous_created_at:
             base_stmt = base_stmt.filter(
                 AssessmentFDWThreeServices.created_at > previous_created_at
+            )
+        if assessment_grade:
+            base_stmt = base_stmt.filter(
+                AssessmentFDWThreeServices.grade == assessment_grade
             )
 
         offset = 0
@@ -324,9 +333,14 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
         page_number: int = 1,
         unit_name: str | None = None,
         institution_id: UUID | None = None,
+        assessment_grade: int | None = None,
     ) -> list[AssessmentSchema]:
         if institution_id:
             student_id_stmt = select(AssessmentFDWThreeServices.student_id).distinct()
+            if assessment_grade:
+                student_id_stmt = student_id_stmt.filter(
+                    AssessmentFDWThreeServices.grade == assessment_grade
+                )
             student_ids = (await session.execute(student_id_stmt)).scalars()
 
             filtered_student_ids = await service_b.get_student_ids(
@@ -340,6 +354,10 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
                 .where(AssessmentFDWThreeServices.student_id.in_(filtered_student_ids))
                 .distinct()
             )
+            if assessment_grade:
+                unit_id_stmt = unit_id_stmt.filter(
+                    AssessmentFDWThreeServices.grade == assessment_grade
+                )
             unit_ids = (await session.execute(unit_id_stmt)).scalars()
             filtered_unit_ids = await service_c.get_unit_ids(
                 {str(unit_id) for unit_id in unit_ids},
@@ -358,6 +376,8 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
             )
         if unit_name:
             stmt = stmt.where(AssessmentFDWThreeServices.unit_id.in_(filtered_unit_ids))
+        if assessment_grade:
+            stmt = stmt.filter(AssessmentFDWThreeServices.grade == assessment_grade)
 
         assessments = (await session.execute(stmt)).scalars().all()
         if not assessments:
