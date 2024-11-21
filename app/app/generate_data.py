@@ -108,21 +108,27 @@ async def generate_assessments_fdw_two_services(session: AsyncSession):
     units = (
         (await session.execute(select(Unit).order_by(Unit.created_at))).scalars().all()
     )
-    students_assessments = {student_id: 0 for student_id in student_ids}
-    assessments_to_create = []
 
-    while len(assessments_to_create) != len(student_ids) * len(units):
+    students_assessments: dict[UUID, set[int]] = {
+        student_id: set() for student_id in student_ids
+    }
+    assessments_to_create: list[AssessmentFDWTwoServices] = []
+
+    while len(assessments_to_create) != len(student_ids) * len(units) * 0.5:
         student_index = randint(0, len(student_ids) - 1)
         student_id = student_ids[student_index]
 
-        if students_assessments[student_id] != 5:
-            unit_index = students_assessments[student_id]
+        if len(students_assessments[student_id]) != len(units):
+            unit_index = randint(0, len(units) - 1)
+            if unit_index in students_assessments[student_id]:
+                continue
+
             unit = units[unit_index]
             assessment = AssessmentFDWTwoServices(
                 unit_id=unit.id, student_id=student_id, created_at=datetime.now()
             )
             assessments_to_create.append(assessment)
-            students_assessments[student_id] += 1
+            students_assessments[student_id].add(unit_index)
 
     session.add_all(assessments_to_create)
     await session.commit()
@@ -162,21 +168,26 @@ async def generate_assessments_fdw_three_services(session: AsyncSession):
             .all()
         )
 
-    students_assessments = {student_id: 0 for student_id in student_ids}
-    assessments_to_create = []
+    students_assessments: dict[UUID, set[int]] = {
+        student_id: set() for student_id in student_ids
+    }
+    assessments_to_create: list[AssessmentFDWThreeServices] = []
 
-    while len(assessments_to_create) != len(student_ids) * len(unit_ids):
+    while len(assessments_to_create) != len(student_ids) * len(unit_ids) * 0.5:
         student_index = randint(0, len(student_ids) - 1)
         student_id = student_ids[student_index]
 
-        if students_assessments[student_id] != 5:
-            unit_index = students_assessments[student_id]
+        if len(students_assessments[student_id]) != len(unit_ids):
+            unit_index = randint(0, len(unit_ids) - 1)
+            if unit_index in students_assessments[student_id]:
+                continue
+
             unit_id = unit_ids[unit_index]
             assessment = AssessmentFDWThreeServices(
                 unit_id=unit_id, student_id=student_id, created_at=datetime.now()
             )
             assessments_to_create.append(assessment)
-            students_assessments[student_id] += 1
+            students_assessments[student_id].add(unit_index)
 
     session.add_all(assessments_to_create)
     await session.commit()
@@ -188,8 +199,8 @@ async def main():
         await generate_units(session)
         await generate_students(session)
         await generate_assessments(session)
-        # await generate_assessments_fdw_two_services(session)
-        # await generate_assessments_fdw_three_services(session)
+        await generate_assessments_fdw_two_services(session)
+        await generate_assessments_fdw_three_services(session)
 
 
 asyncio.run(main())
