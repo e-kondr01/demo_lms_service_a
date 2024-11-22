@@ -1,3 +1,4 @@
+import urllib.parse
 from random import choice, randint
 
 from locust import FastHttpUser, between, task
@@ -7,6 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from app.models import Assessment, Institution, Unit
 from app.models.foreign import ServiceBInstitution, ServiceCUnit
 
+# Get values for filtering from DB
 engine = create_engine("postgresql://postgres:postgres@localhost:5432/service_a")
 session_factory = sessionmaker(engine, expire_on_commit=False)
 
@@ -22,64 +24,115 @@ with session_factory() as session:
     service_c_unit_names = (
         session.execute(select(ServiceCUnit.name).distinct()).scalars().all()
     )
-# TODO: добавить вариант None без фильтра
+
+
+def add_filter(params: dict, choices, filter: str) -> dict:
+    filter_value = choice(choices)
+    return params | {filter: filter_value}
+
+
+# Менять в сценарии с изменением размера страницы
+SIZE = 20
+TOTAL_ASSESSMENTS = 275000
+MAX_PAGE_NUMBER = int(TOTAL_ASSESSMENTS / SIZE)
 
 
 class AssessmentUser(FastHttpUser):
     host = "http://127.0.0.1:8000"
-    # TODO
     wait_time = between(0.5, 1)
 
 
 class SharedDBUser(AssessmentUser):
     @task
     def get_assessments(self):
-        # Менять в сценарии с изменением размера страницы
-        size = 20
+        url = f"/api/assessments/shared-db?size={SIZE}"
 
-        url = f"/api/assessments/shared-db?size={size}"
-
-        max_page_number = int(275000 / size)
-        page_number = randint(1, max_page_number)
+        page_number = randint(1, MAX_PAGE_NUMBER)
         url += f"&page={page_number}"
+        params = {}
+        params = add_filter(params, service_a_unit_ids, "unit_id")
 
-        unit_id = choice(service_a_unit_ids)
-        if unit_id:
-            url += f"&unit_id={unit_id}"
+        params = add_filter(params, service_a_institution_ids, "institution_id")
 
-        institution_id = choice(service_a_institution_ids)
-        if institution_id:
-            url += f"&institution_id={institution_id}"
-
-        self.client.get(url)
+        self.client.get(url, params=params)
 
 
-class CyclicCompositionAssessmentUser(AssessmentUser):
+class APICompositionTwoServicesCyclicUser(AssessmentUser):
     @task
     def get_assessments(self):
-        size = 800
-        url = f"/api/assessments/cyclic-api-composition?size={size}"
-        unit_id = choice(service_a_unit_ids)
-        if unit_id:
-            url += f"&unit_id={unit_id}"
-        institution_id = choice(service_a_institution_ids)
-        if institution_id:
-            url += f"&institution_id={institution_id}"
-        self.client.get(url)
+        url = f"/api/assessments/api-composition/two-services/cyclic?size={SIZE}"
+        params = {}
+        params = add_filter(params, service_a_unit_ids, "unit_id")
+        params = add_filter(params, service_a_institution_ids, "institution_id")
+        self.client.get(url, params=params)
 
 
-class PaginatedCompositionAssessmentUser(AssessmentUser):
+class APICompositionTwoServicesPrefilterUser(AssessmentUser):
     @task
     def get_assessments(self):
-        size = 20
-        url = f"/api/assessments/paginated-api-composition?size={size}"
-        max_page_number = int(3550 / size)
-        page_number = randint(1, max_page_number)
+        url = f"/api/assessments/api-composition/two-services/prefilter?size={SIZE}"
+
+        page_number = randint(1, MAX_PAGE_NUMBER)
         url += f"&page={page_number}"
-        unit_id = choice(service_a_unit_ids)
-        if unit_id:
-            url += f"&unit_id={unit_id}"
-        institution_id = choice(service_a_institution_ids)
-        if institution_id:
-            url += f"&institution_id={institution_id}"
-        self.client.get(url)
+        params = {}
+        params = add_filter(params, service_a_unit_ids, "unit_id")
+
+        params = add_filter(params, service_a_institution_ids, "institution_id")
+
+        self.client.get(url, params=params)
+
+
+class APICompositionThreeServicesCyclicUser(AssessmentUser):
+    @task
+    def get_assessments(self):
+        url = f"/api/assessments/api-composition/three-services/cyclic?size={SIZE}"
+        params = {}
+        params = add_filter(params, service_c_unit_names, "unit_name")
+        params = add_filter(params, service_a_institution_ids, "institution_id")
+        params = add_filter(params, service_a_assessment_grades, "assessment_grade")
+        self.client.get(url, params=params)
+
+
+class APICompositionThreeServicesPrefilterUser(AssessmentUser):
+    @task
+    def get_assessments(self):
+        url = f"/api/assessments/api-composition/three-services/prefilter?size={SIZE}"
+
+        page_number = randint(1, MAX_PAGE_NUMBER)
+        url += f"&page={page_number}"
+        params = {}
+        params = add_filter(params, service_c_unit_names, "unit_name")
+        params = add_filter(params, service_a_institution_ids, "institution_id")
+        params = add_filter(params, service_a_assessment_grades, "assessment_grade")
+
+        self.client.get(url, params=params)
+
+
+class FDWTwoServicesUser(AssessmentUser):
+    @task
+    def get_assessments(self):
+        url = f"/api/assessments/fdw/two-services?size={SIZE}"
+
+        page_number = randint(1, MAX_PAGE_NUMBER)
+        url += f"&page={page_number}"
+        params = {}
+        params = add_filter(params, service_a_unit_ids, "unit_id")
+
+        params = add_filter(params, service_a_institution_ids, "institution_id")
+
+        self.client.get(url, params=params)
+
+
+class FDWThreeServicesUser(AssessmentUser):
+    @task
+    def get_assessments(self):
+        url = f"/api/assessments/fdw/three-services?size={SIZE}"
+
+        page_number = randint(1, MAX_PAGE_NUMBER)
+        url += f"&page={page_number}"
+
+        params = {}
+        params = add_filter(params, service_c_unit_names, "unit_name")
+        params = add_filter(params, service_a_assessment_grades, "assessment_grade")
+        params = add_filter(params, service_a_institution_ids, "institution_id")
+        self.client.get(url, params=params)
