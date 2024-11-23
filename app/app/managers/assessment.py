@@ -342,27 +342,38 @@ class AssessmentManager(ModelManager[Assessment, AssessmentSchema, AssessmentSch
                     AssessmentFDWThreeServices.grade == assessment_grade
                 )
             student_ids = (await session.execute(student_id_stmt)).scalars()
+            if not student_ids:
+                return []
 
             filtered_student_ids = await service_b.get_student_ids(
                 {str(student_id) for student_id in student_ids},
                 institution_id=institution_id,
             )
+            if not filtered_student_ids:
+                return []
 
         if unit_name:
-            unit_id_stmt = (
-                select(AssessmentFDWThreeServices.unit_id)
-                .where(AssessmentFDWThreeServices.student_id.in_(filtered_student_ids))
-                .distinct()
-            )
+            unit_id_stmt = select(AssessmentFDWThreeServices.unit_id).distinct()
+
+            if institution_id:
+                unit_id_stmt = unit_id_stmt.where(
+                    AssessmentFDWThreeServices.student_id.in_(filtered_student_ids)
+                )
+
             if assessment_grade:
                 unit_id_stmt = unit_id_stmt.filter(
                     AssessmentFDWThreeServices.grade == assessment_grade
                 )
             unit_ids = (await session.execute(unit_id_stmt)).scalars()
+            if not unit_ids:
+                return []
+
             filtered_unit_ids = await service_c.get_unit_ids(
                 {str(unit_id) for unit_id in unit_ids},
                 name=unit_name,
             )
+            if not filtered_unit_ids:
+                return []
 
         stmt = (
             select(AssessmentFDWThreeServices)

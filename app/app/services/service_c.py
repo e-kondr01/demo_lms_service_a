@@ -20,11 +20,11 @@ class ServiceС(BaseClient):
         return units_by_id
 
     async def get_unit_ids(self, ids: set[str], **kwargs) -> list[UUID]:
-        params = {"ids": ",".join(ids)}
+        body = {"ids": ",".join(ids)}
         for key, value in kwargs.items():
             if value:
-                params[key] = value
-        response = await self._get("/units/ids", params=params)
+                body[key] = str(value)
+        response = await self._post("/units/ids", json=body)
         return [UUID(result_item) for result_item in response]
 
 

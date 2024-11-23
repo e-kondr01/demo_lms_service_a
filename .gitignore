@@ -8,4 +8,4 @@ error.log
 .venv/
 .env
 data/
-locust_stats/*
+app/locust_stats/*

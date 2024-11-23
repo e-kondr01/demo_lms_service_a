@@ -20,11 +20,11 @@ class ServiceB(BaseClient):
         return students_by_id
 
     async def get_student_ids(self, ids: set[str], **kwargs) -> list[UUID]:
-        params = {"ids": ",".join(ids)}
+        body = {"ids": ",".join(ids)}
         for key, value in kwargs.items():
             if value:
-                params[key] = value
-        response = await self._get("/students/ids", params=params)
+                body[key] = str(value)
+        response = await self._post("/students/ids", json=body)
         return [UUID(result_item) for result_item in response]
 
 
