@@ -10,6 +10,8 @@ engine = create_async_engine(
     settings.SQLALCHEMY_DATABASE_URL,
     echo=False,
     connect_args={"server_settings": {"jit": "off"}},
+    pool_size=4,
+    max_overflow=0,
 )
 
 async_session_factory = async_sessionmaker(engine, expire_on_commit=False)
