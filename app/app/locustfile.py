@@ -4,6 +4,7 @@ from locust import FastHttpUser, between, task
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
+from app.config import settings
 from app.models import Assessment, Institution, Unit
 from app.models.foreign import ServiceBInstitution, ServiceCUnit
 
@@ -129,4 +130,33 @@ class FDWThreeServicesUser(AssessmentUser):
         params = add_filter(params, service_c_unit_names, "unit_name")
         params = add_filter(params, service_a_assessment_grades, "assessment_grade")
         params = add_filter(params, service_a_institution_ids, "institution_id")
+        self.client.get(url, params=params)
+
+
+# Для сценария, когда есть нагрузка и на хост A, и на другие
+
+
+class ServiceBUser(AssessmentUser):
+    host = settings.SERVICE_B_HOST
+
+    @task
+    def get_students(self):
+        url = "/api/students"
+
+        params = {}
+        params = add_filter(params, service_b_institution_ids, "institution_id")
+
+        self.client.get(url, params=params)
+
+
+class ServiceCUser(AssessmentUser):
+    host = settings.SERVICE_C_HOST
+
+    @task
+    def get_units(self):
+        url = "/api/units"
+
+        params = {}
+        params = add_filter(params, service_c_unit_names, "name")
+
         self.client.get(url, params=params)

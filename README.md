@@ -65,7 +65,11 @@ make up
 
 ## Stress test
 ```bash
-cd app/app
+cd app
 
 locust --class-picker -f app/locustfile.py --csv locust_stats/assessment
+```
+
+```
+gunicorn -k uvicorn.workers.UvicornWorker -w 23 app.main:app -b 0.0.0.0:8000
 ```
