@@ -1,12 +1,45 @@
+import math
 from random import choice, randint
 
-from locust import FastHttpUser, between, task
+from locust import FastHttpUser, LoadTestShape, between, task
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
 from app.config import settings
 from app.models import Assessment, Institution, Unit
 from app.models.foreign import ServiceBInstitution, ServiceCUnit
+
+
+class StepLoadShape(LoadTestShape):
+    """
+    A step load shape
+
+
+    Keyword arguments:
+
+        step_time -- Time between steps
+        step_load -- User increase amount at each step
+        spawn_rate -- Users to stop/start per second at every step
+        time_limit -- Time limit in seconds
+
+    """
+
+    hold_time = 10
+    ramp_up_time = 5
+    step_time = hold_time + ramp_up_time
+    step_load = 100
+    spawn_rate = step_load / ramp_up_time
+    time_limit = step_time * 20
+
+    def tick(self):
+        run_time = self.get_run_time()
+
+        if run_time > self.time_limit:
+            return None
+
+        current_step = math.floor(run_time / self.step_time) + 1
+        return (current_step * self.step_load, self.spawn_rate)
+
 
 # Get values for filtering from DB
 engine = create_engine("postgresql://postgres:postgres@localhost:5432/service_a")
